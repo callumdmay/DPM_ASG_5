@@ -1,63 +1,56 @@
 package ev3ObjectDetector;
 
-import java.util.Arrays;
 
 import ev3Odometer.Odometer;
-import lejos.hardware.lcd.LCD;
+import ev3WallFollower.UltrasonicPoller;
 import lejos.robotics.SampleProvider;
 
-public class ObjectDetector extends Thread{
-	
-	SampleProvider usSensor, colorValue;
-	private float[] 			usData;
-	
-	private final int 		usSensorMaxDistance = 40;
-	
+public class ObjectDetector{
+
+	SampleProvider colorValue;
 	Odometer odometer;
-	
-	public ObjectDetector(SampleProvider pUsSensor, float[] pUsData, SampleProvider pColorValue, Odometer pOdometer)
+	UltrasonicPoller ultraSonicPoller;
+
+	private float[] colorData;
+	private final int FILTER_OUT = 5;
+	private int filterControl;
+	private final double obstacleDistance = 20;
+
+	private ObstacleAvoider obstacleAvoider;
+
+	public ObjectDetector(UltrasonicPoller pUltraSonicPoller, SampleProvider pColorValue, float[] pColorData, Odometer pOdometer, ObstacleAvoider pObstacleAvoider)
 	{
-		usSensor = pUsSensor;
-		usData = pUsData;
+		ultraSonicPoller  = pUltraSonicPoller;
 		colorValue = pColorValue;
+		colorData = pColorData;
 		odometer = pOdometer;
+		obstacleAvoider = pObstacleAvoider;
 	}
 
-	
-	public void run()
+
+	//This method checks for obstacles in front of the robot as it is moving forward
+	public void checkForObjects( double pX, double pY)
 	{
-		
-	}
-	
-	
-	public void detectObject()
-	{
-		
-	}
-	
-	private float getFilteredData(int sampleSize){
 
-		float sampleData[] = new float[sampleSize];
-
-		for(int index = 0 ; index < sampleData.length; index++)
+		// rudimentary filter - checks 5 times to ensure obstacle is really ahead of robot
+		if( ultraSonicPoller.getDistance() < obstacleDistance)
 		{
-			usSensor.fetchSample(usData, 0);
-
-			if(usData[0]*100> usSensorMaxDistance)
-				usData[0] = usSensorMaxDistance;
-
-			sampleData[index] = usData[0]*100;
-			try {
-				Thread.sleep(5);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			filterControl ++;
 		}
 
-		Arrays.sort(sampleData);
-		LCD.drawString("Distance: "+sampleData[(int) Math.floor(sampleData.length/2)], 0, 4);
-		return sampleData[(int) Math.floor(sampleData.length/2)];
+		//We must get 5 readings of less than 25 before we initiate obstacle avoidance
+		if(filterControl < FILTER_OUT)
+			return;
+
+		filterControl = 0;
+
+		determineObject();
 	}
+
+	public void determineObject()
+	{
+
+	}
+
 
 }
