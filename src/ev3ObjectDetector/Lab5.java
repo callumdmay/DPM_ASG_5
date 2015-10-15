@@ -65,7 +65,7 @@ public class Lab5 {
 		usl.doLocalization();
 
 		
-		ObjectDetector objectSearcher = new ObjectDetector(usValue, colorValue, odometer);
+		ObjectDetector objectSearcher = new ObjectDetector(usValue, usData, colorValue, odometer);
 
 		
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);

@@ -9,12 +9,16 @@ import lejos.robotics.SampleProvider;
 public class ObjectDetector extends Thread{
 	
 	SampleProvider usSensor, colorValue;
+	private float[] 			usData;
+	
+	private final int 		usSensorMaxDistance = 40;
 	
 	Odometer odometer;
 	
-	public ObjectDetector(SampleProvider pUsSensor, SampleProvider pColorValue, Odometer pOdometer)
+	public ObjectDetector(SampleProvider pUsSensor, float[] pUsData, SampleProvider pColorValue, Odometer pOdometer)
 	{
 		usSensor = pUsSensor;
+		usData = pUsData;
 		colorValue = pColorValue;
 		odometer = pOdometer;
 	}
