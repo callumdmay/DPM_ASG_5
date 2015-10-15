@@ -5,7 +5,10 @@ import ev3Localization.LightLocalizer;
 import ev3Localization.USLocalizer;
 import ev3Localization.USLocalizer.LocalizationType;
 import ev3Navigator.Navigator;
+import ev3Objects.Motors;
 import ev3Odometer.Odometer;
+import ev3WallFollower.PController;
+import ev3WallFollower.UltrasonicController;
 import ev3WallFollower.UltrasonicPoller;
 import lejos.hardware.*;
 import lejos.hardware.ev3.LocalEV3;
@@ -26,13 +29,13 @@ public class Lab5 {
 	private static final Port usPort = LocalEV3.get().getPort("S1");		
 	private static final Port colorPort = LocalEV3.get().getPort("S4");		
 
-	
+
 	public static final double WHEEL_RADIUS = 2.25;
 	public static final double TRACK = 16.2;
 
 
 	public static void main(String[] args) {
-		
+
 		//Setup ultrasonic sensor
 		// 1. Create a port object attached to a physical port (done above)
 		// 2. Create a sensor instance and attach to port
@@ -42,7 +45,8 @@ public class Lab5 {
 		SensorModes usSensor = new EV3UltrasonicSensor(usPort);
 		SampleProvider usValue = usSensor.getMode("Distance");			// colorValue provides samples from this instance
 		float[] usData = new float[usValue.sampleSize()];				// colorData is the buffer in which data are returned
-		
+
+		UltrasonicPoller usPoller = new UltrasonicPoller(usValue, usData);
 		//Setup color sensor
 		// 1. Create a port object attached to a physical port (done above)
 		// 2. Create a sensor instance and attach to port
@@ -51,26 +55,30 @@ public class Lab5 {
 		SensorModes colorSensor = new EV3ColorSensor(colorPort);
 		SampleProvider colorValue = colorSensor.getMode("Red");			// colorValue provides samples from this instance
 		float[] colorData = new float[colorValue.sampleSize()];			// colorData is the buffer in which data are returned
-				
+
 		// setup the odometer and display
 		Odometer odometer = new Odometer(WHEEL_RADIUS, TRACK, leftMotor, rightMotor);
 		odometer.start();
 		LCDInfo lcd = new LCDInfo(odometer);
-		
+
+		//Create motors object
+		Motors motors = new Motors(leftMotor, rightMotor, WHEEL_RADIUS, TRACK);
 		//Create navigator
-		Navigator navigator = new Navigator(odometer, leftMotor, rightMotor, WHEEL_RADIUS, TRACK);
-		
+		Navigator navigator = new Navigator(odometer, motors);
+
+		UltrasonicController pController = new PController(motors);
+
 		// perform the ultrasonic localization
 		USLocalizer usl = new USLocalizer(odometer, usValue, usData, USLocalizer.LocalizationType.RISING_EDGE, navigator);
 		usl.doLocalization();
 
-		
-		ObjectDetector objectSearcher = new ObjectDetector(usValue, usData, colorValue, odometer);
+		ObstacleAvoider obstacleAvoider = new ObstacleAvoider(odometer, usPoller, pController, motors);
+		ObjectDetector objectDetector = new ObjectDetector(usPoller,colorValue, colorData, odometer, obstacleAvoider);
 
-		
+
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
 		System.exit(0);	
-		
+
 	}
 
 }
