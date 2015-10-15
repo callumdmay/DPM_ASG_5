@@ -2,6 +2,8 @@ package ev3Navigator;
 
 import java.util.Queue;
 
+import ev3ObjectDetector.ObjectDetector;
+import ev3Objects.Motors;
 import ev3Odometer.Odometer;
 import ev3WallFollower.UltrasonicController;
 import ev3WallFollower.UltrasonicPoller;
@@ -24,8 +26,8 @@ public class Navigator extends Thread{
 	private final int SMALL_CORRECTION_SPEED =20;
 
 	private Odometer odometer;
+	private ObjectDetector objectDetector;
 
-	private NavigatorObstacleAvoider obstacleAvoider;
 
 	private boolean isCheckingForObstacles;
 
@@ -33,30 +35,31 @@ public class Navigator extends Thread{
 	private static Queue<Coordinate> coordinates;
 
 
-	public Navigator(Odometer pOdometer, UltrasonicPoller pUltraSonicPoller, UltrasonicController pwallFollowerController, EV3LargeRegulatedMotor pLeftMotor, EV3LargeRegulatedMotor pRightMotor, 
-			EV3LargeRegulatedMotor pNeckMotor, double pWheelRadius, double pAxleLength)
+
+	public Navigator(Odometer pOdometer, UltrasonicPoller pUltraSonicPoller, UltrasonicController pwallFollowerController, Motors pMotors, ObjectDetector pObjectDetector)
 	{
 		odometer 					= pOdometer;
-		leftMotor 					= pLeftMotor;
-		rightMotor 					= pRightMotor;
-		neckMotor 					= pNeckMotor;
-		wheelRadius 				= pWheelRadius;
-		axleLength 					= pAxleLength;
+		leftMotor 					= pMotors.getRightMotor();
+		rightMotor 					= pMotors.getRightMotor();
+		neckMotor 					= pMotors.getNeckMotor();
+		wheelRadius 				= pMotors.getWheelRadius();
+		axleLength 					= pMotors.getAxleLength();
+		objectDetector 				= pObjectDetector;
 
 		isCheckingForObstacles = true;
-		obstacleAvoider = new NavigatorObstacleAvoider(pOdometer, pUltraSonicPoller, pwallFollowerController, pLeftMotor, 
-				pRightMotor, pNeckMotor, pWheelRadius,pAxleLength );
+
 
 	}
 
-	public Navigator(Odometer pOdometer, EV3LargeRegulatedMotor pLeftMotor, EV3LargeRegulatedMotor pRightMotor, double pWheelRadius, double pAxleLength)
+	public Navigator(Odometer pOdometer, Motors pMotors)
 	{
 		odometer 					= pOdometer;
-		leftMotor 					= pLeftMotor;
-		rightMotor 					= pRightMotor;
+		leftMotor 					= pMotors.getRightMotor();
+		rightMotor 					= pMotors.getRightMotor();
+		neckMotor 					= pMotors.getNeckMotor();
+		wheelRadius 				= pMotors.getWheelRadius();
+		axleLength 					= pMotors.getAxleLength();
 		neckMotor 					= null;
-		wheelRadius 				= pWheelRadius;
-		axleLength 					= pAxleLength;
 
 		isCheckingForObstacles = false;
 	}
@@ -82,7 +85,7 @@ public class Navigator extends Thread{
 		while(Math.abs(pX- odometer.getX()) > locationError || Math.abs(pY - odometer.getY()) > locationError)
 		{
 			if(isCheckingForObstacles)
-				obstacleAvoider.checkForObstacles(pX, pY);
+				objectDetector.checkForObjects(pX, pY);
 
 			navigateToCoordinates(pX, pY);
 
