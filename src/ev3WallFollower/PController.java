@@ -1,10 +1,13 @@
 package ev3WallFollower;
 
+import ev3Objects.Motors;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
 public class PController implements UltrasonicController {
 
-	private final int bandCenter, bandwidth;
+
+	private static final int bandCenter = 25;			// Offset from the wall (cm)
+	private static final int bandWidth = 3;				// Width of dead band (cm)
 	private final int motorStraight = 150, FILTER_OUT = 20;
 	private final int offset = 20;
 	private EV3LargeRegulatedMotor leftMotor, rightMotor;
@@ -12,13 +15,10 @@ public class PController implements UltrasonicController {
 	private int filterControl;
 
 
-	public PController(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
-			int bandCenter, int bandwidth) {
+	public PController(Motors pMotors) {
 		//Default Constructor
-		this.bandCenter = bandCenter;
-		this.bandwidth = bandwidth;
-		this.leftMotor = leftMotor;
-		this.rightMotor = rightMotor;
+		this.leftMotor = pMotors.getLeftMotor();
+		this.rightMotor = pMotors.getRightMotor();
 		filterControl = 0;
 	}
 
@@ -51,7 +51,7 @@ public class PController implements UltrasonicController {
 			reverse();
 
 		//Correct distance to wall
-		if(Math.abs(distanceError) <= bandwidth)
+		if(Math.abs(distanceError) <= bandWidth)
 		{
 			leftMotor.setSpeed(motorStraight);					// Initalize motor rolling forward
 			rightMotor.setSpeed(motorStraight);
@@ -59,7 +59,7 @@ public class PController implements UltrasonicController {
 			rightMotor.forward();
 		}
 		//Too far from wall
-		else if (distanceError > bandwidth)
+		else if (distanceError > bandWidth)
 		{
 			//Offset is used to smooth out curve, so vehicle doesn't turn too sharply
 			int leftSpeed = motorStraight - scaledSpeedDelta(distanceError) + (int)(1.5*offset);
@@ -72,7 +72,7 @@ public class PController implements UltrasonicController {
 			rightMotor.forward();
 		}
 		//Too close to wall
-		else if (distanceError < bandwidth*(-1))
+		else if (distanceError < bandWidth*(-1))
 		{
 			//Change speed according to error size, the offset is used to tweak the turning radius
 			int leftSpeed = motorStraight + scaledSpeedDelta(distanceError) +2*offset;
