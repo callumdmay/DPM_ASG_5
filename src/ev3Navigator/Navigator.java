@@ -1,8 +1,9 @@
 package ev3Navigator;
 
-import java.util.Queue;
+import java.util.ArrayList;
 
 import ev3ObjectDetector.ObjectDetector;
+import ev3Objects.FoundBlockException;
 import ev3Objects.Motors;
 import ev3Odometer.Odometer;
 import ev3WallFollower.UltrasonicController;
@@ -32,7 +33,7 @@ public class Navigator extends Thread{
 	private boolean isCheckingForObstacles;
 
 	public static int coordinateCount = 0;
-	private static Queue<Coordinate> coordinates;
+	private static ArrayList<Coordinate> coordinates;
 
 
 
@@ -51,7 +52,7 @@ public class Navigator extends Thread{
 
 	}
 
-	public Navigator(Odometer pOdometer, Motors pMotors)
+	public Navigator(Odometer pOdometer, Motors pMotors, ObjectDetector pObjectDetector)
 	{
 		odometer 					= pOdometer;
 		leftMotor 					= pMotors.getRightMotor();
@@ -60,6 +61,7 @@ public class Navigator extends Thread{
 		wheelRadius 				= pMotors.getWheelRadius();
 		axleLength 					= pMotors.getAxleLength();
 		neckMotor 					= null;
+		objectDetector 				= pObjectDetector;
 
 		isCheckingForObstacles = false;
 	}
@@ -69,10 +71,18 @@ public class Navigator extends Thread{
 	{
 		resetMotors();
 
-		//For each coordinate in the queue, 
-		for( Coordinate coordinate : coordinates)
-			travelTo(coordinate.getX(), coordinate.getY());
-
+		try{
+			//For each coordinate in the queue, 
+			for( Coordinate coordinate : coordinates)
+				travelTo(coordinate.getX(), coordinate.getY());
+		}
+		catch(FoundBlockException e)
+		{
+			double endX = coordinates.get(coordinates.size()).getX();
+			double endY = coordinates.get(coordinates.size()).getY();
+			
+			travelTo(endX, endY);
+		}
 
 		resetMotors();
 	}
@@ -85,8 +95,18 @@ public class Navigator extends Thread{
 		while(Math.abs(pX- odometer.getX()) > locationError || Math.abs(pY - odometer.getY()) > locationError)
 		{
 			if(isCheckingForObstacles)
-				objectDetector.checkForObjects(pX, pY);
+			{
+				if(objectDetector.detectedObject())
+				{
+					stopMotors();
+					objectDetector.processObject(pX, pY);
+					if(objectDetector.getCurrentObject().equals(ObjectDetector.OBJECT_TYPE.block))
+					{
+						throw new FoundBlockException();
+					}
 
+				}
+			}
 			navigateToCoordinates(pX, pY);
 
 		}
@@ -189,7 +209,7 @@ public class Navigator extends Thread{
 	}
 
 	//Sets the global coordinates for the navigator
-	public void setCoordinates(Queue<Coordinate> pCoordinates)
+	public void setCoordinates(ArrayList pCoordinates)
 	{
 		coordinates = pCoordinates;
 	}

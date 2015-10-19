@@ -1,5 +1,6 @@
 package ev3Localization;
 
+import ev3ObjectDetector.ObjectDetector;
 import ev3Odometer.Odometer;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
@@ -9,15 +10,18 @@ import lejos.utility.TimerListener;
 public class LCDInfo implements TimerListener{
 	public static final int LCD_REFRESH = 100;
 	private Odometer odo;
+	private ObjectDetector objectDetector;
 	private Timer lcdTimer;
 	private TextLCD LCD = LocalEV3.get().getTextLCD();;
 	
 	// arrays for displaying data
 	private double [] pos;
 	
-	public LCDInfo(Odometer odo) {
+	public LCDInfo(Odometer odo, ObjectDetector objectDetector) {
 		this.odo = odo;
+		this.objectDetector = objectDetector;
 		this.lcdTimer = new Timer(LCD_REFRESH, this);
+		
 		
 		// initialise the arrays for displaying data
 		pos = new double [3];
@@ -35,6 +39,11 @@ public class LCDInfo implements TimerListener{
 		LCD.drawString((formattedDoubleToString(pos[0], 2)), 3, 0);
 		LCD.drawString(formattedDoubleToString(pos[1], 2), 3, 1);
 		LCD.drawString(formattedDoubleToString(pos[2], 2), 3, 2);
+		LCD.drawString("Obj Detect:"+ objectDetector.isObjectDetected(), 0, 3);
+		
+		if(objectDetector.isObjectDetected())
+			LCD.drawString("Type:"+ objectDetector.getCurrentObject(), 0, 4);
+
 	}
 	
 	private static String formattedDoubleToString(double x, int places) {

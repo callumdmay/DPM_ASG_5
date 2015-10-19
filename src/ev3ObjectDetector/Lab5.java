@@ -59,21 +59,25 @@ public class Lab5 {
 		// setup the odometer and display
 		Odometer odometer = new Odometer(WHEEL_RADIUS, TRACK, leftMotor, rightMotor);
 		odometer.start();
-		LCDInfo lcd = new LCDInfo(odometer);
 
 		//Create motors object
 		Motors motors = new Motors(leftMotor, rightMotor, WHEEL_RADIUS, TRACK);
-		//Create navigator
-		Navigator navigator = new Navigator(odometer, motors);
 
+		//Create wallfolling controller
 		UltrasonicController pController = new PController(motors);
 
+		//Create obstacle handling objects
+		ObstacleAvoider obstacleAvoider = new ObstacleAvoider(odometer, usPoller, pController, motors);
+		ObjectDetector objectDetector = new ObjectDetector(usPoller,colorValue, colorData, odometer, obstacleAvoider);
+		
+		LCDInfo lcd = new LCDInfo(odometer, objectDetector);
+		
+		//Create navigator
+		Navigator navigator = new Navigator(odometer, motors, objectDetector);
+		
 		// perform the ultrasonic localization
 		USLocalizer usl = new USLocalizer(odometer, usValue, usData, USLocalizer.LocalizationType.RISING_EDGE, navigator);
 		usl.doLocalization();
-
-		ObstacleAvoider obstacleAvoider = new ObstacleAvoider(odometer, usPoller, pController, motors);
-		ObjectDetector objectDetector = new ObjectDetector(usPoller,colorValue, colorData, odometer, obstacleAvoider);
 
 
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
