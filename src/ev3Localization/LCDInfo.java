@@ -39,10 +39,12 @@ public class LCDInfo implements TimerListener{
 		LCD.drawString((formattedDoubleToString(pos[0], 2)), 3, 0);
 		LCD.drawString(formattedDoubleToString(pos[1], 2), 3, 1);
 		LCD.drawString(formattedDoubleToString(pos[2], 2), 3, 2);
-		LCD.drawString("Obj Detect:"+ objectDetector.isObjectDetected(), 0, 3);
+
+		LCD.drawString("Obj Distance:"+ objectDetector.getObjectDistance(), 0, 3);
+		LCD.drawString("Obj Detect:"+ objectDetector.isObjectDetected(), 0, 4);
 		
-		if(objectDetector.isObjectDetected())
-			LCD.drawString("Type:"+ objectDetector.getCurrentObject(), 0, 4);
+		if(objectDetector.getCurrentObject() != null)
+			LCD.drawString("Type:"+ objectDetector.getCurrentObject(), 0, 5);
 
 	}
 	

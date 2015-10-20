@@ -58,7 +58,7 @@ public class ObstacleAvoider {
 		do{
 			currentX = odometer.getX();
 			currentY = odometer.getY();
-			wallFollowerController.processUSData(ultraSonicPoller.getDistance());
+			wallFollowerController.processUSData((int) ultraSonicPoller.getDistance());
 		} while(Math.abs(NavigatorUtility.calculateAngleError(pX - currentX, pY - currentY, odometer.getTheta())*180/Math.PI) > wallFollowingAngleError);
 
 		neckMotor.rotate(neckMotor_OFFSET, false);

@@ -6,15 +6,13 @@ import ev3ObjectDetector.ObjectDetector;
 import ev3Objects.FoundBlockException;
 import ev3Objects.Motors;
 import ev3Odometer.Odometer;
-import ev3WallFollower.UltrasonicController;
-import ev3WallFollower.UltrasonicPoller;
+import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
 public class Navigator extends Thread{
 
 	private EV3LargeRegulatedMotor leftMotor;
 	private EV3LargeRegulatedMotor rightMotor;
-	private EV3LargeRegulatedMotor neckMotor;
 
 	private double wheelRadius;
 	private double axleLength;
@@ -24,91 +22,69 @@ public class Navigator extends Thread{
 
 	private final int FORWARD_SPEED = 200;
 	private final int ROTATE_SPEED = 100;
-	private final int SMALL_CORRECTION_SPEED =20;
+	private final int SMALL_CORRECTION_SPEED =40;
 
 	private Odometer odometer;
 	private ObjectDetector objectDetector;
 
-
-	private boolean isCheckingForObstacles;
+	private ArrayList<Coordinate> objectCoordinates = new ArrayList<Coordinate>();
 
 	public static int coordinateCount = 0;
 	private static ArrayList<Coordinate> coordinates;
 
 
-
-	public Navigator(Odometer pOdometer, UltrasonicPoller pUltraSonicPoller, UltrasonicController pwallFollowerController, Motors pMotors, ObjectDetector pObjectDetector)
-	{
-		odometer 					= pOdometer;
-		leftMotor 					= pMotors.getRightMotor();
-		rightMotor 					= pMotors.getRightMotor();
-		neckMotor 					= pMotors.getNeckMotor();
-		wheelRadius 				= pMotors.getWheelRadius();
-		axleLength 					= pMotors.getAxleLength();
-		objectDetector 				= pObjectDetector;
-
-		isCheckingForObstacles = true;
-
-
-	}
-
 	public Navigator(Odometer pOdometer, Motors pMotors, ObjectDetector pObjectDetector)
 	{
 		odometer 					= pOdometer;
-		leftMotor 					= pMotors.getRightMotor();
+		leftMotor 					= pMotors.getLeftMotor();
 		rightMotor 					= pMotors.getRightMotor();
-		neckMotor 					= pMotors.getNeckMotor();
 		wheelRadius 				= pMotors.getWheelRadius();
 		axleLength 					= pMotors.getAxleLength();
-		neckMotor 					= null;
 		objectDetector 				= pObjectDetector;
 
-		isCheckingForObstacles = false;
+		for (EV3LargeRegulatedMotor motor : new EV3LargeRegulatedMotor[] { leftMotor, rightMotor }) {
+			motor.stop();
+			motor.setAcceleration(2000);
+		}
+
 	}
 
 	@Override
 	public void run()
 	{
-		resetMotors();
+		Sound.beepSequenceUp();
 
-		try{
-			//For each coordinate in the queue, 
-			for( Coordinate coordinate : coordinates)
-				travelTo(coordinate.getX(), coordinate.getY());
-		}
-		catch(FoundBlockException e)
-		{
-			double endX = coordinates.get(coordinates.size()).getX();
-			double endY = coordinates.get(coordinates.size()).getY();
-			
-			travelTo(endX, endY);
-		}
+		//Move to the first coordinate and face to the next coordinate
+		double currentX = coordinates.get(0).getX();
+		double currentY = coordinates.get(0).getY();
+		double pX = coordinates.get(1).getX();
+		double pY = coordinates.get(1).getY();
+		
+		travelTo(currentX, currentY);
 
-		resetMotors();
+		turnTo(	NavigatorUtility.calculateNewAngle(pX - currentX, pY - currentY));
+		coordinates.remove(0);
+
+		for(Coordinate coordinate: coordinates)
+			travelTo(coordinate.getX(), coordinate.getY());
 	}
 
 	//This method takes a new x and y location, and moves to it while avoiding obstacles
 	public void travelTo(double pX, double pY)
 	{
-
 		//While the robot is not at the objective coordinates, keep moving towards it 
 		while(Math.abs(pX- odometer.getX()) > locationError || Math.abs(pY - odometer.getY()) > locationError)
 		{
-			if(isCheckingForObstacles)
+			if(objectDetector.detectedObject())
 			{
-				if(objectDetector.detectedObject())
-				{
-					stopMotors();
-					objectDetector.processObject(pX, pY);
-					if(objectDetector.getCurrentObject().equals(ObjectDetector.OBJECT_TYPE.block))
-					{
-						throw new FoundBlockException();
-					}
-
-				}
+				Sound.beep();
+				stopMotors();
+				double objectDistance = objectDetector.getObjectDistance();
+				investigateObject(objectDistance * Math.cos(odometer.getTheta()), objectDistance * Math.sin(odometer.getTheta()));
 			}
-			navigateToCoordinates(pX, pY);
 
+
+			navigateToCoordinates(pX, pY);
 		}
 
 	}
@@ -129,7 +105,7 @@ public class Navigator extends Thread{
 		if(deltaTheta < -Math.PI)
 			rotationAngle = deltaTheta + 2*Math.PI;
 
-		if(deltaTheta > 2*Math.PI)
+		if(deltaTheta > Math.PI)
 			rotationAngle = deltaTheta - 2*Math.PI;
 
 		//Basic proportional control on turning speed when
@@ -193,7 +169,7 @@ public class Navigator extends Thread{
 		{
 			//Basic proportional control, when the robot gets close to 
 			//required coordinates, slow down 
-			if(Math.abs(pX - currentX) <= 3 || Math.abs(pY - currentY ) <= 3)
+			if(Math.abs(pX - currentX) <= 3 && Math.abs(pY - currentY ) <= 3)
 			{
 				leftMotor.setSpeed(SMALL_CORRECTION_SPEED);
 				rightMotor.setSpeed(SMALL_CORRECTION_SPEED);
@@ -208,26 +184,55 @@ public class Navigator extends Thread{
 		}
 	}
 
-	//Sets the global coordinates for the navigator
-	public void setCoordinates(ArrayList pCoordinates)
+	private void scanForObjects()
 	{
-		coordinates = pCoordinates;
+		stopMotors();
+		double currentTheta = odometer.getTheta();
+		boolean objectDetected = false;
+		while(odometer.getTheta() <= currentTheta +Math.toRadians(15) ||objectDetected)
+		{	
+			rotateCounterClockWise(30);
+			if(objectDetector.detectedObject())
+			{
+				Sound.beep();
+				objectDetected = true;
+				double objectDistance = objectDetector.getObjectDistance();
+				double xCoordinate = objectDistance * Math.cos(odometer.getTheta());
+				double yCoordinate = objectDistance * Math.sin(odometer.getTheta());
+
+				objectCoordinates.add(new Coordinate(xCoordinate, yCoordinate));
+			}
+		}
+		turnTo(currentTheta);
+		while(odometer.getTheta() >= currentTheta -Math.toRadians(15) ||objectDetected)
+		{	
+			rotateCounterClockWise(30);
+			if(objectDetector.detectedObject())
+			{
+				Sound.beep();
+				objectDetected = true;
+				double objectDistance = objectDetector.getObjectDistance();
+				double xCoordinate = objectDistance * Math.cos(odometer.getTheta());
+				double yCoordinate = objectDistance * Math.sin(odometer.getTheta());
+
+				objectCoordinates.add(new Coordinate(xCoordinate, yCoordinate));
+			}
+		}
 	}
 
-	//Stops and resets the motors
-	private void resetMotors()
+	private void investigateObject(double pX, double pY)
 	{
-		for (EV3LargeRegulatedMotor motor : new EV3LargeRegulatedMotor[] { leftMotor, rightMotor }) {
-			motor.stop();
-			motor.setAcceleration(2000);
-		}
 
-		if(neckMotor != null)
-		{		
-			neckMotor.stop();
-			neckMotor.setAcceleration(2000);
-			neckMotor.setSpeed(50);
-		}
+		while(objectDetector.getObjectDistance() >=4)
+			navigateToCoordinates(pX, pY);
+		
+		objectDetector.processObject();
+	}
+
+	//Sets the global coordinates for the navigator
+	public void setCoordinates(ArrayList<Coordinate> pCoordinates)
+	{
+		coordinates = pCoordinates;
 	}
 
 	public void stopMotors()
