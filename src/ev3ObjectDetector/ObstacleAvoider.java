@@ -11,7 +11,8 @@ public class ObstacleAvoider {
 
 	private EV3LargeRegulatedMotor leftMotor;
 	private EV3LargeRegulatedMotor rightMotor;
-	private EV3LargeRegulatedMotor neckMotor;
+
+	public enum DIRECTION {left , right};
 
 	private Odometer odometer;
 	private UltrasonicPoller ultraSonicPoller;
@@ -31,7 +32,6 @@ public class ObstacleAvoider {
 		odometer 					= pOdometer;
 		leftMotor 					= pMotors.getRightMotor();
 		rightMotor 					= pMotors.getRightMotor();
-		neckMotor 					= pMotors.getNeckMotor();
 		wheelRadius 				= pMotors.getWheelRadius();
 		axleLength 					= pMotors.getAxleLength();
 	}
@@ -48,7 +48,6 @@ public class ObstacleAvoider {
 		rightMotor.stop();
 		leftMotor.stop();
 
-		neckMotor.rotate(-1 * neckMotor_OFFSET, true);
 		leftMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, 90), true);
 		rightMotor.rotate(-NavigatorUtility.convertAngle(wheelRadius, axleLength, 90), false);
 
@@ -61,8 +60,37 @@ public class ObstacleAvoider {
 			wallFollowerController.processUSData((int) ultraSonicPoller.getDistance());
 		} while(Math.abs(NavigatorUtility.calculateAngleError(pX - currentX, pY - currentY, odometer.getTheta())*180/Math.PI) > wallFollowingAngleError);
 
-		neckMotor.rotate(neckMotor_OFFSET, false);
 	}
 
+	public void squareAvoid(double length, DIRECTION direction )
+	{
+		leftMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, -axleLength/2));
+		rightMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, -axleLength/2), true);
+
+		double angle;
+		if(direction.equals(ObstacleAvoider.DIRECTION.left))
+			angle = 90;
+		else if(direction.equals(ObstacleAvoider.DIRECTION.right))
+			angle = -90;
+		else
+		{
+			throw new IllegalArgumentException();
+		}
+		
+		leftMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(-angle)));
+		rightMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(angle)), true);
+		leftMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, length));
+		rightMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, length), true);
+		leftMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(angle)));
+		leftMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, length+ axleLength/2));
+		rightMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, length + axleLength/2), true);
+		leftMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(angle)));
+		rightMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(-angle)), true);
+		leftMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, length));
+		rightMotor.rotate(NavigatorUtility.convertDistance(wheelRadius, length), true);
+		leftMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(-angle)));
+		rightMotor.rotate(NavigatorUtility.convertAngle(wheelRadius, axleLength, Math.toRadians(angle)), true);
+
+	}
 
 }
