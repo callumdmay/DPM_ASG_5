@@ -13,7 +13,7 @@ public class ObjectDetector{
 	private SampleProvider colorValue;
 	private Odometer odometer;
 	private UltrasonicPoller ultraSonicPoller;
-	private ObstacleAvoider obstacleAvoider;
+	public ObstacleAvoider obstacleAvoider;
 
 	public enum OBJECT_TYPE { block, obstacle } 
 
@@ -50,8 +50,8 @@ public class ObjectDetector{
 		{
 			synchronized(lock)
 			{
-				objectDetected = false;
-				currentObject = null;
+				setObjectDetected(false);
+				setCurrentObject(null);
 			}
 			return false;
 		}
@@ -59,12 +59,10 @@ public class ObjectDetector{
 		filterControl = 0;
 		synchronized(lock)
 		{
-			objectDetected = true;
+			setObjectDetected(true);
 		}
 		return true;
 	}
-
-
 
 	public void processObject()
 	{
@@ -73,13 +71,13 @@ public class ObjectDetector{
 			colorValue.fetchSample(colorData, 0);
 			if(colorData[0]== 2){
 				Sound.beep();
-				currentObject = OBJECT_TYPE.block;
+				setCurrentObject(OBJECT_TYPE.block);
 			}
 			else
 			{
 				Sound.beep();
 				Sound.beep();
-				currentObject = OBJECT_TYPE.obstacle;
+				setCurrentObject(OBJECT_TYPE.obstacle);
 			}
 		}
 	}
@@ -94,6 +92,22 @@ public class ObjectDetector{
 		return returnedValue;
 	}
 
+	public void setObjectDetected(boolean objectDetected) {
+		synchronized(lock)
+		{
+			this.objectDetected = objectDetected;
+		}
+	}		
+	
+	public void setCurrentObject(OBJECT_TYPE pObject)
+	{
+		synchronized(lock)
+		{
+			currentObject = pObject;
+		}	
+	}
+
+
 	public OBJECT_TYPE getCurrentObject() {
 		OBJECT_TYPE returnedValue;
 		synchronized(lock)
@@ -107,8 +121,6 @@ public class ObjectDetector{
 
 		return ultraSonicPoller.getDistance();
 	}
-
-
 
 
 }
