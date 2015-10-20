@@ -29,15 +29,16 @@ public class Lab5 {
 	// Color sensor port connected to input S2
 	private static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("C"));
 	private static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
+	private static final EV3LargeRegulatedMotor clawMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("B"));
 	private static final Port usPort = LocalEV3.get().getPort("S1");		
 	private static final Port colorPort = LocalEV3.get().getPort("S4");		
 
 
 	public static final double WHEEL_RADIUS = 2.25;
 	public static final double TRACK = 16.2;
-	private static final double  tileLength = 30.48;
 
-	private static final double [][] coordinates = {	{0.5, -0.5}, {1.5,-0.5}, {1.5,1.5}, {-0.5,1.5}, {-0.5,2.5}, {2.5,2.5}, {2.5,-0.5}	};
+
+	private static final double [][] coordinates = {	{0.5, -0.5}, {1.5,-0.5}, {1.5,1.5}, {-0.5,1.5}, {-0.5,2.5}, {2.5,2.5}, {2.5,-0.5}, {2.5,2.5}};
 
 
 	public static void main(String[] args) {
@@ -68,7 +69,7 @@ public class Lab5 {
 		odometer.start();
 
 		//Create motors object
-		Motors motors = new Motors(leftMotor, rightMotor, WHEEL_RADIUS, TRACK);
+		Motors motors = new Motors(leftMotor, rightMotor, clawMotor, WHEEL_RADIUS, TRACK);
 
 		//Create wallfolling controller
 		UltrasonicController pController = new PController(motors);
@@ -80,7 +81,7 @@ public class Lab5 {
 
 		//Create navigator
 		Navigator navigator = new Navigator(odometer, motors, objectDetector);
-		navigator.setCoordinates(createCoordinatesList(coordinates));
+	
 
 		// perform the ultrasonic localization
 		USLocalizer usl = new USLocalizer(odometer, usValue, usData, USLocalizer.LocalizationType.RISING_EDGE, navigator);
@@ -109,6 +110,7 @@ public class Lab5 {
 		case Button.ID_LEFT :
 			lcd = new LCDInfo(odometer, objectDetector);
 			usl.doLocalization();
+			navigator.setCoordinates(coordinates);
 			navigator.start();
 			break;
 
@@ -136,14 +138,5 @@ public class Lab5 {
 	}
 	
 
-	public static ArrayList<Coordinate> createCoordinatesList( double coordinates[][])
-	{
-		ArrayList<Coordinate> coordinatesQueue = new ArrayList<Coordinate>();
-
-		for (int x = 0 ; x < coordinates.length; x++)
-			coordinatesQueue.add(new Coordinate(coordinates[x][0]*tileLength,coordinates[x][1]*tileLength));
-
-		return coordinatesQueue;
-	}
-
+	
 }

@@ -48,6 +48,7 @@ public class NavigatorUtility {
 
 	}
 	
+	//calculates angle between the current orientation theta, and the new coordinates defined by deltaX and deltaY
 	public static double calculateAngleError(double deltaX, double deltaY, double theta)
 	{
 		if(deltaX >= 0 )
@@ -65,5 +66,9 @@ public class NavigatorUtility {
 	//Convert radian angle we want into an angle the motor can turn to
 	public static int convertAngle(double radius, double width, double angle) {
 		return (int) ((180.0 * Math.PI * width * angle / 360.0) / (Math.PI * radius));
+	}
+	
+	public static int convertDistance(double radius, double distance) {
+		return (int) ((180.0 * distance) / (Math.PI * radius));
 	}
 }
