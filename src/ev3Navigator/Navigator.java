@@ -101,8 +101,7 @@ public class Navigator extends Thread{
 		{
 			if(objectDetector.detectedObject())
 			{
-				Sound.beep();
-				stopMotors();
+
 
 				double objectDistance = objectDetector.getObjectDistance();
 				double objectX = objectDistance * Math.cos(odometer.getTheta());
@@ -110,6 +109,8 @@ public class Navigator extends Thread{
 
 				if(objectX >= arenaBoundaryCoordinates.get(0).getX() && objectY >=arenaBoundaryCoordinates.get(0).getY())
 				{
+					Sound.beep();
+					stopMotors();
 					investigateObject(objectX,objectY);
 
 					if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.block)
