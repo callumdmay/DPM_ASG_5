@@ -1,6 +1,8 @@
 package ev3ObjectDetector;
 
 
+import java.util.Arrays;
+
 import ev3Odometer.Odometer;
 import ev3WallFollower.UltrasonicPoller;
 import lejos.hardware.Sound;
@@ -12,17 +14,17 @@ public class ObjectDetector{
 	private Odometer odometer;
 	private UltrasonicPoller ultraSonicPoller;
 	private ObstacleAvoider obstacleAvoider;
-	
+
 	public enum OBJECT_TYPE { block, obstacle } 
 
 	private float[] colorData;
 	private final int FILTER_OUT = 5;
 	private int filterControl;
-	private final double obstacleDistance = 5;
+	private final double obstacleDistance = 20;
 	private OBJECT_TYPE currentObject;
 	private boolean objectDetected;
 
-
+	private Object lock = new Object();
 
 	public ObjectDetector(UltrasonicPoller pUltraSonicPoller, SampleProvider pColorValue, float[] pColorData, Odometer pOdometer, ObstacleAvoider pObstacleAvoider)
 	{
@@ -41,55 +43,72 @@ public class ObjectDetector{
 		// rudimentary filter - checks 5 times to ensure obstacle is really ahead of robot
 		if( ultraSonicPoller.getDistance() < obstacleDistance)
 		{
-			filterControl ++;
+			filterControl++;
 		}
 
-		//We must get 5 readings of less than 25 before we initiate obstacle avoidance
 		if(filterControl < FILTER_OUT)
 		{
-			objectDetected = false;
+			synchronized(lock)
+			{
+				objectDetected = false;
+				currentObject = null;
+			}
 			return false;
 		}
 
 		filterControl = 0;
-		objectDetected = true;
-		
+		synchronized(lock)
+		{
+			objectDetected = true;
+		}
 		return true;
 	}
 
-	public void processObject(double pX, double pY)
+
+
+	public void processObject()
 	{
-		if(objectIsBlock())
+		if(ultraSonicPoller.getDistance() <=6 && currentObject == null)
 		{
-			Sound.beep();
-			currentObject = OBJECT_TYPE.block;
-		}
-		else
-		{
-			Sound.beep();
-			Sound.beep();
-			currentObject = OBJECT_TYPE.obstacle;
-			obstacleAvoider.avoidObstacle(pX, pY);
+			colorValue.fetchSample(colorData, 0);
+			if(colorData[0]== 2){
+				Sound.beep();
+				currentObject = OBJECT_TYPE.block;
+			}
+			else
+			{
+				Sound.beep();
+				Sound.beep();
+				currentObject = OBJECT_TYPE.obstacle;
+			}
 		}
 	}
 
-	
-	private boolean objectIsBlock()
-	{
-		return true;
-	}
-	
 	public boolean isObjectDetected()
 	{
-		return objectDetected;
+		boolean returnedValue;
+		synchronized(lock)
+		{
+			returnedValue = objectDetected;
+		}
+		return returnedValue;
 	}
 
 	public OBJECT_TYPE getCurrentObject() {
-		return currentObject;
+		OBJECT_TYPE returnedValue;
+		synchronized(lock)
+		{
+			returnedValue = currentObject;
+		}	
+		return returnedValue;
+	}
+
+	public double getObjectDistance(){
+
+		return ultraSonicPoller.getDistance();
 	}
 
 
-	
 
 
 }
