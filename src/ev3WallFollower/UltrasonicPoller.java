@@ -21,7 +21,7 @@ public class UltrasonicPoller implements TimerListener{
 	private SampleProvider ultraSonicSensorSampleProvider;
 	private float[] usData;
 	//set to 30 as we need the distance variable to be initialized above the obstacle detection distance
-	private double distance = 30;
+	private double distance = 60;
 	private Object lock;
 	private Timer lcdTimer;
 	public static final int LCD_REFRESH = 10;

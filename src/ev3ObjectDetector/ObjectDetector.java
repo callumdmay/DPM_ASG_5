@@ -20,7 +20,7 @@ public class ObjectDetector{
 	private float[] colorData;
 	private final int FILTER_OUT = 5;
 	private int filterControl;
-	private final double obstacleDistance = 20;
+	private final double defaultObstacleDistance = 20;
 	private OBJECT_TYPE currentObject;
 	private boolean objectDetected;
 
@@ -37,36 +37,55 @@ public class ObjectDetector{
 
 
 	//This method checks for obstacles in front of the robot as it is moving forward
+	public boolean detectedObject(int distance)
+	{
+
+		// rudimentary filter - checks 5 times to ensure obstacle is really ahead of robot
+		if( ultraSonicPoller.getDistance() < distance)
+		{
+			synchronized(lock)
+			{
+				setObjectDetected(true);
+			}
+			return true;
+
+		}
+		
+		synchronized(lock)
+		{
+			setObjectDetected(false);
+			setCurrentObject(null);
+		}
+		return false;
+	}
+
 	public boolean detectedObject()
 	{
 
 		// rudimentary filter - checks 5 times to ensure obstacle is really ahead of robot
-		if( ultraSonicPoller.getDistance() < obstacleDistance)
-		{
-			filterControl++;
-		}
-
-		if(filterControl < FILTER_OUT)
+		if( ultraSonicPoller.getDistance() < defaultObstacleDistance)
 		{
 			synchronized(lock)
 			{
-				setObjectDetected(false);
-				setCurrentObject(null);
+				setObjectDetected(true);
 			}
-			return false;
-		}
+			return true;
 
-		filterControl = 0;
+		}
+		
 		synchronized(lock)
 		{
-			setObjectDetected(true);
+			setObjectDetected(false);
+			setCurrentObject(null);
 		}
-		return true;
+		return false;
+
 	}
 
 	public void processObject()
 	{
-		if(ultraSonicPoller.getDistance() <=6 && currentObject == null)
+
+		if(ultraSonicPoller.getDistance() <=8  && getCurrentObject() == null)
 		{
 			colorValue.fetchSample(colorData, 0);
 			if(colorData[0]== 2){
@@ -98,13 +117,19 @@ public class ObjectDetector{
 			this.objectDetected = objectDetected;
 		}
 	}		
-	
+
 	public void setCurrentObject(OBJECT_TYPE pObject)
 	{
 		synchronized(lock)
 		{
 			currentObject = pObject;
 		}	
+	}
+
+
+
+	public double getDefaultObstacleDistance() {
+		return defaultObstacleDistance;
 	}
 
 

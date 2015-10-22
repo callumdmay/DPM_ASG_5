@@ -187,7 +187,7 @@ public class USLocalizer {
 
 	}
 
-	private double calculateAngleAverage(double angle1, double angle2)
+	public static double calculateAngleAverage(double angle1, double angle2)
 	{
 		double x = Math.abs(angle1 -angle2);
 

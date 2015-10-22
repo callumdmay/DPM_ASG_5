@@ -38,8 +38,7 @@ public class Lab5 {
 	public static final double TRACK = 16.2;
 
 
-	private static final double [][] coordinates = {	{0.5, -0.5}, {1.5,-0.5}, {1.5,1.5}, {-0.5,1.5}, {-0.5,2.5}, {2.5,2.5}, {2.5,-0.5}, {2.5,2.5}};
-
+	private static final double [][] scanCoordinates = { {0,1},	{0,2}, {1,2}, {2,2}, {2,1}, {2,0}, {1,1}, {2.5, 2.5}	};
 
 	public static void main(String[] args) {
 
@@ -98,7 +97,7 @@ public class Lab5 {
 			// ask the user whether the motors should drive in a square or float
 			t.drawString("< Left | Right > ", 0, 0);
 			t.drawString("       |         ", 0, 1);
-			t.drawString("Scan   |Determine", 0, 2);
+			t.drawString("Search |Determine", 0, 2);
 			t.drawString("for    |Objects  ", 0, 3);
 			t.drawString("Objects|         ", 0, 4);
 
@@ -110,7 +109,7 @@ public class Lab5 {
 		case Button.ID_LEFT :
 			lcd = new LCDInfo(odometer, objectDetector);
 			usl.doLocalization();
-			navigator.setCoordinates(coordinates);
+			navigator.setCoordinates(scanCoordinates);
 			navigator.start();
 			break;
 

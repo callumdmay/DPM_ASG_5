@@ -18,7 +18,7 @@ public class Navigator extends Thread{
 
 	private double wheelRadius;
 	private double axleLength;
-	private static final double  tileLength = 30.48;
+	private static final double  tileLength = 30.9;
 
 	private final double locationError = 1;
 	private final double navigatingAngleError = 1;
@@ -64,23 +64,15 @@ public class Navigator extends Thread{
 	{
 		Sound.beepSequenceUp();
 
-		//Move to the first coordinate and face to the next coordinate
-		double currentX = coordinates.get(0).getX();
-		double currentY = coordinates.get(0).getY();
-		double pX = coordinates.get(1).getX();
-		double pY = coordinates.get(1).getY();
-
-		travelTo(currentX, currentY);
-
-		turnTo(	NavigatorUtility.calculateNewAngle(pX - currentX, pY - currentY), false);
-		coordinates.remove(0);
-
+		turnTo(0, false);
+		travelTo(0,0);
 		//Initiate search pattern, defined by input coordinates to navigator
 		try{
 
 			for(Coordinate coordinate: coordinates)
 			{
 				travelTo(coordinate.getX(), coordinate.getY());
+				scanForObjects();
 			}
 
 		}
@@ -88,9 +80,13 @@ public class Navigator extends Thread{
 		{
 			//capture the block and travel to the last coordinate point, which is always the end zone
 			captureBlock();
-			travelTo(coordinates.get(coordinates.size()).getX(), coordinates.get(coordinates.size()).getY());
+			double pX = coordinates.get(coordinates.size()-1).getX();
+			double pY = coordinates.get(coordinates.size()-1).getY();
+			while(Math.abs(pX- odometer.getX()) > locationError || Math.abs(pY - odometer.getY()) > locationError)
+			{
+				moveToCoordinates(pX, pY);
+			}
 		}
-
 	}
 
 	//This method takes a new x and y location, and moves to it while avoiding obstacles
@@ -102,29 +98,17 @@ public class Navigator extends Thread{
 			if(objectDetector.detectedObject())
 			{
 
+				Sound.beep();
+				stopMotors();
+				investigateObject();
 
-				double objectDistance = objectDetector.getObjectDistance();
-				double objectX = objectDistance * Math.cos(odometer.getTheta());
-				double objectY =  objectDistance * Math.sin(odometer.getTheta());
+				//Determine result of investigation
+				if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.block)
+					throw new FoundBlockException();
 
-				if(objectX >= arenaBoundaryCoordinates.get(0).getX() && objectY >=arenaBoundaryCoordinates.get(0).getY())
+				if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.obstacle)
 				{
-					Sound.beep();
-					stopMotors();
-					investigateObject(objectX,objectY);
-
-					if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.block)
-						throw new FoundBlockException();
-					
-					if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.obstacle)
-						if(odometer.getX() <= tileLength * 1.6 && odometer.getY() <= tileLength * 1.6)
-						{
-							objectDetector.obstacleAvoider.squareAvoid(10, ObstacleAvoider.DIRECTION.left);
-						}
-						else
-						{
-							objectDetector.obstacleAvoider.squareAvoid(10, ObstacleAvoider.DIRECTION.right);
-						}
+					objectDetector.obstacleAvoider.squareAvoid(10, ObstacleAvoider.DIRECTION.right);
 				}
 			}
 
@@ -170,8 +154,6 @@ public class Navigator extends Thread{
 	}
 
 
-
-
 	/*
 	 * This method simply navigates to the given coordinates
 	 */
@@ -204,21 +186,67 @@ public class Navigator extends Thread{
 		}
 	}
 
-
-
-	private void investigateObject(double pX, double pY)
+	private void scanForObjects()
 	{
+		stopMotors();
+		double endingTheta = odometer.getTheta() - Math.toRadians(5);
+		//apply wrap around to maintain angles in [0,360]
+		if(endingTheta < 0)
+			endingTheta += Math.toRadians(360);
+		
+		//while the robot has not done a full revolution, scan for objects
+		while(Math.abs(odometer.getTheta() - endingTheta )>= Math.toRadians(2))
+		{	
+			rotateCounterClockWise(50);
+			if(objectDetector.detectedObject())
+			{
+				stopMotors();
 
-		while(objectDetector.getObjectDistance() >=4)
-			moveToCoordinates(pX, pY);
+				Sound.beep();
+				double currentXLoc = odometer.getX();
+				double currentYLoc = odometer.getY();
+
+				//capture the object angle
+				double objectAngle = odometer.getTheta();
+				//turn a little more towards the object
+				turnTo(objectAngle+ Math.toRadians(17), false);
+
+				investigateObject();
+
+				if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.block)
+					throw new FoundBlockException();
+
+				if(objectDetector.getCurrentObject() == ObjectDetector.OBJECT_TYPE.obstacle)
+				{
+					leftMotor.rotate(-450, true);
+					rightMotor.rotate(-450, false);
+					moveToCoordinates(currentXLoc, currentYLoc);
+					turnTo(objectAngle+Math.toRadians(90),false);
+				}
+
+			}
+		}
+
+	}
+
+	private void investigateObject()
+	{
+		while(objectDetector.getObjectDistance() >=6 )
+		{
+			if(objectDetector.getObjectDistance()> objectDetector.getDefaultObstacleDistance())
+				break;
+			driveStraight(30);
+		}
 
 		objectDetector.processObject();
 	}
 
 	private void captureBlock()
 	{
-		clawMotor.rotate(210);
+		clawMotor.setSpeed(50);
+		clawMotor.rotate(-80);
 		clawMotor.flt();
+
 	}
 
 
@@ -242,8 +270,8 @@ public class Navigator extends Thread{
 
 	public void stopMotors()
 	{
-		leftMotor.stop();
-		rightMotor.stop();
+		leftMotor.stop(true);
+		rightMotor.stop(false);
 	}
 
 	public void rotateClockWise(int speed)
@@ -264,6 +292,14 @@ public class Navigator extends Thread{
 		rightMotor.forward();
 	}
 
+	public void driveStraight(int speed)
+	{
+		leftMotor.setSpeed(speed);
+		rightMotor.setSpeed(speed);
+
+		leftMotor.forward();
+		rightMotor.forward();
+	}
 
 }
 

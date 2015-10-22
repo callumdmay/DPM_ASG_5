@@ -62,6 +62,19 @@ public class NavigatorUtility {
 
 		throw new ArithmeticException("Cannot calculate new angle");
 	}
+	
+	public static double calculateAngleAverage(double angle1, double angle2)
+	{
+		double x = Math.abs(angle1 -angle2);
+
+		if (x < Math.PI) 
+			return  ((angle1 + angle2) / 2) % (2 *Math.PI);
+		if (x != Math.PI)
+			return (((angle1 + angle2) / 2) + Math.PI) % (2 *Math.PI);
+
+		throw new ArithmeticException("Could not calculate angle average of numbers");
+
+	}
 
 	//Convert radian angle we want into an angle the motor can turn to
 	public static int convertAngle(double radius, double width, double angle) {
